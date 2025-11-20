@@ -1,153 +1,324 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>لعبة البازل - السمكة</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @keyframes bounce-once {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-20px); }
-    }
-    .animate-bounce-once {
-      animation: bounce-once 1s ease-in-out;
-    }
-  </style>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-blue-400 via-blue-300 to-cyan-300 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full">
-    <div class="text-center mb-6">
-      <h1 class="text-3xl font-bold text-blue-600 mb-2">🐠 لعبة البازل - السمكة</h1>
-      <p class="text-gray-600">انقر على قطعتين لتبديلهما</p>
-    </div>
-
-    <div id="puzzle-grid" class="grid grid-cols-3 gap-2 mb-6 bg-blue-100 p-4 rounded-lg"></div>
-
-    <div class="flex justify-center">
-      <button id="shuffle-btn" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 3 21 3 21 8"></polyline>
-          <line x1="4" y1="20" x2="21" y2="3"></line>
-          <polyline points="21 16 21 21 16 21"></polyline>
-          <line x1="15" y1="15" x2="21" y2="21"></line>
-          <line x1="4" y1="4" x2="9" y2="9"></line>
-        </svg>
-        خلط جديد
-      </button>
-    </div>
-  </div>
-
-  <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-gradient-to-br from-yellow-100 to-orange-100 rounded-2xl shadow-2xl p-8 max-w-md w-full border-4 border-yellow-400 animate-bounce-once">
-      <div class="text-center">
-        <div class="text-6xl mb-4">🎉</div>
-        <h2 class="text-2xl font-bold text-orange-600 mb-4">أحسنت!</h2>
-        <div class="bg-white rounded-lg p-6 mb-6 shadow-inner">
-          <p class="text-right text-lg leading-relaxed text-gray-800">
-            مكان رايحته تشبه ذكريات دافية، وأصوات الملاعق فيه خفيفة كأنها همس. الأطباق تطلع كأنها طالعة من سر قديم… والليّ يقعد جوّه يحس إنه مدعو على حاجة مش لأي حد. فين ده؟
-          </p>
-        </div>
-        <button id="play-again-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-md">
-          العب مرة أخرى
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let pieces = [];
-    let selectedPiece = null;
-    let isSolved = false;
-
-    function createFishSVG(pieceIndex) {
-      const cols = 3;
-      const rows = 2;
-      const col = pieceIndex % cols;
-      const row = Math.floor(pieceIndex / cols);
-      
-      const viewBoxX = col * (300 / cols);
-      const viewBoxY = row * (200 / rows);
-      const viewBoxW = 300 / cols;
-      const viewBoxH = 200 / rows;
-
-      return `
-        <svg viewBox="${viewBoxX} ${viewBoxY} ${viewBoxW} ${viewBoxH}" class="w-full h-full">
-          <ellipse cx="150" cy="100" rx="80" ry="50" fill="#FF8C42" stroke="#D96B2A" stroke-width="3"/>
-          <path d="M 230 100 L 280 70 L 280 130 Z" fill="#FF8C42" stroke="#D96B2A" stroke-width="3"/>
-          <path d="M 140 50 Q 150 30 160 50" fill="#FFA562" stroke="#D96B2A" stroke-width="2"/>
-          <path d="M 140 150 Q 150 170 160 150" fill="#FFA562" stroke="#D96B2A" stroke-width="2"/>
-          <ellipse cx="120" cy="115" rx="15" ry="25" fill="#FFA562" stroke="#D96B2A" stroke-width="2"/>
-          <circle cx="110" cy="90" r="8" fill="white" stroke="#333" stroke-width="2"/>
-          <circle cx="110" cy="90" r="4" fill="#333"/>
-          <path d="M 90 105 Q 95 110 100 105" fill="none" stroke="#D96B2A" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="140" cy="95" r="8" fill="none" stroke="#D96B2A" stroke-width="1" opacity="0.5"/>
-          <circle cx="155" cy="95" r="8" fill="none" stroke="#D96B2A" stroke-width="1" opacity="0.5"/>
-          <circle cx="170" cy="95" r="8" fill="none" stroke="#D96B2A" stroke-width="1" opacity="0.5"/>
-          <circle cx="147" cy="107" r="8" fill="none" stroke="#D96B2A" stroke-width="1" opacity="0.5"/>
-          <circle cx="162" cy="107" r="8" fill="none" stroke="#D96B2A" stroke-width="1" opacity="0.5"/>
-          <circle cx="70" cy="70" r="4" fill="#B3E5FC" opacity="0.6"/>
-          <circle cx="60" cy="85" r="3" fill="#B3E5FC" opacity="0.6"/>
-          <circle cx="75" cy="80" r="2" fill="#B3E5FC" opacity="0.6"/>
-        </svg>
-      `;
-    }
-
-    function shufflePuzzle() {
-      const positions = [0, 1, 2, 3, 4, 5];
-      for (let i = positions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [positions[i], positions[j]] = [positions[j], positions[i]];
-      }
-      pieces = positions;
-      selectedPiece = null;
-      isSolved = false;
-      document.getElementById('success-modal').classList.add('hidden');
-      renderPuzzle();
-    }
-
-    function checkSolved() {
-      return pieces.every((piece, index) => piece === index);
-    }
-
-    function handlePieceClick(index) {
-      if (isSolved) return;
-
-      if (selectedPiece === null) {
-        selectedPiece = index;
-      } else {
-        [pieces[selectedPiece], pieces[index]] = [pieces[index], pieces[selectedPiece]];
-        selectedPiece = null;
-
-        if (checkSolved()) {
-          isSolved = true;
-          document.getElementById('success-modal').classList.remove('hidden');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Puzzle Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
         }
-      }
-      renderPuzzle();
-    }
 
-    function renderPuzzle() {
-      const grid = document.getElementById('puzzle-grid');
-      grid.innerHTML = '';
-      
-      pieces.forEach((pieceValue, index) => {
-        const div = document.createElement('div');
-        div.className = `aspect-[3/2] bg-white rounded-lg cursor-pointer transition-all duration-200 border-4 ${
-          selectedPiece === index
-            ? 'border-yellow-400 scale-95 shadow-lg'
-            : 'border-blue-300 hover:border-blue-400 hover:scale-105'
-        }`;
-        div.innerHTML = createFishSVG(pieceValue);
-        div.onclick = () => handlePieceClick(index);
-        grid.appendChild(div);
-      });
-    }
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
 
-    document.getElementById('shuffle-btn').onclick = shufflePuzzle;
-    document.getElementById('play-again-btn').onclick = shufflePuzzle;
+        h1 {
+            color: #0984e3;
+            margin-bottom: 20px;
+        }
 
-    shufflePuzzle();
-  </script>
+        .puzzle-container {
+            display: inline-block;
+            border: 3px solid #0984e3;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(2, 120px);
+            gap: 2px;
+            background: #ddd;
+            padding: 5px;
+        }
+
+        .puzzle-piece {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .puzzle-piece:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .puzzle-piece.empty {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            cursor: default;
+        }
+
+        .puzzle-piece.empty:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .fish-part {
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYwIiBoZWlnaHQ9IjI0MCIgdmlld0JveD0iMCAwIDM2MCAyNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImZpc2hHcmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZjc2NzUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiNmZmI5NDYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmY2MzQ3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIEZpc2ggYm9keSAtLT4KICA8ZWxsaXBzZSBjeD0iMTgwIiBjeT0iMTIwIiByeD0iMTIwIiByeT0iNzAiIGZpbGw9InVybCgjZmlzaEdyYWRpZW50KSIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjMiLz4KICA8IS0tIFRhaWwgLS0+CiAgPHBhdGggZD0iTSAzMDAgMTIwIEwgMzQwIDgwIEwgMzUwIDEyMCBMIDM0MCAzNjAgWiIgZmlsbD0iI2ZmYjk0NiIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8IS0tIEV5ZSAtLT4KICA8Y2lyY2xlIGN4PSIxMzAiIGN5PSIxMDAiIHI9IjE1IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8Y2lyY2xlIGN4PSIxMzUiIGN5PSIxMDAiIHI9IjciIGZpbGw9IiMzMzMiLz4KICA8Y2lyY2xlIGN4PSIxMzciIGN5PSI5NyIgcj0iMyIgZmlsbD0id2hpdGUiLz4KICA8IS0tIEZpbnMgLS0+CiAgPHBhdGggZD0iTSAxNDAgMTcwIEwgMTIwIDIwMCBMIDE2MCAyMDAgWiIgZmlsbD0iI2ZmOTEwMCIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBkPSJNIDEwMCAxNDAgTCA3MCAzNjAgTCAxMjAgMjQwIFoiIGZpbGw9IiNmZjkxMDAiIHN0cm9rZT0iI2U3NGMzYyIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBNb3V0aCAtLT4KICA8ZWxsaXBzZSBjeD0iNzAiIGN5PSIxMjAiIHJ4PSIxNSIgcnk9IjgiIGZpbGw9IiM2NjYiLz4KICA8IS0tIFNjYWxlcyAtLT4KICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSIxMTAiIHI9IjgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U3NGMzYyIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjUiLz4KICA8Y2lyY2xlIGN4PSIyMDAiIGN5PSIzNDAiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNlNzRjM2MiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+CiAgPGNpcmNsZSBjeD0iMTgwIiBjeT0iMTUwIiByPSI2IiBmaWxsPSJub25lIiBzdHJva2U9IiNlNzRjM2MiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg==');
+            background-size: 360px 240px;
+            background-repeat: no-repeat;
+        }
+
+        .buttons {
+            margin: 20px 0;
+        }
+
+        button {
+            background: #0984e3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #74b9ff;
+            transform: translateY(-2px);
+        }
+
+        .victory-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+            border: 3px solid #fff;
+        }
+
+        .victory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+            display: none;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+
+        .move-counter {
+            color: #0984e3;
+            font-size: 18px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐟 Fish Puzzle Game</h1>
+        <div class="move-counter">Moves: <span id="moveCount">0</span></div>
+        
+        <div class="puzzle-container">
+            <div class="puzzle-grid" id="puzzleGrid">
+                <!-- Puzzle pieces will be generated here -->
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button onclick="shufflePuzzle()">Shuffle</button>
+            <button onclick="resetPuzzle()">Reset</button>
+        </div>
+    </div>
+
+    <div class="victory-overlay" id="victoryOverlay" onclick="closeVictoryMessage()"></div>
+    <div class="victory-message" id="victoryMessage">
+        <button class="close-btn" onclick="closeVictoryMessage()">×</button>
+        <div style="font-size: 32px; margin-bottom: 15px;">🎉 تهانينا! 🎉</div>
+        <div style="font-size: 18px; line-height: 1.6;">مكان ريحته تشبه ذكريات دافية، وأصوات الملاعق فيه خفيفة كأنها همس. الأطباق تطلع كأنها طالعة من سر قديم… واللي يقعد جوّه يحس إنه مدعو على حاجة مش لأي حد. فين ده؟</div>
+    </div>
+
+    <script>
+        let grid = [];
+        let emptyPos = { row: 1, col: 2 }; // Bottom right is empty
+        let moves = 0;
+
+        function initPuzzle() {
+            const puzzleGrid = document.getElementById('puzzleGrid');
+            puzzleGrid.innerHTML = '';
+            
+            // Initialize solved state
+            grid = [
+                [0, 1, 2],
+                [3, 4, 5]
+            ];
+            
+            // Create puzzle pieces
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'puzzle-piece';
+                    piece.onclick = () => movePiece(row, col);
+                    updatePiece(piece, row, col);
+                    puzzleGrid.appendChild(piece);
+                }
+            }
+            
+            moves = 0;
+            updateMoveCounter();
+        }
+
+        function updatePiece(piece, row, col) {
+            const pieceNum = grid[row][col];
+            
+            if (pieceNum === 5) {
+                piece.className = 'puzzle-piece empty';
+                piece.innerHTML = '';
+            } else {
+                piece.className = 'puzzle-piece';
+                piece.innerHTML = '<div class="fish-part"></div>';
+                
+                const fishPart = piece.querySelector('.fish-part');
+                const offsetX = -(pieceNum % 3) * 120;
+                const offsetY = -Math.floor(pieceNum / 3) * 120;
+                fishPart.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+            }
+        }
+
+        function movePiece(row, col) {
+            const pieceNum = grid[row][col];
+            
+            // Can't move the empty space
+            if (pieceNum === 5) return;
+            
+            // Check if adjacent to empty space
+            const rowDiff = Math.abs(row - emptyPos.row);
+            const colDiff = Math.abs(col - emptyPos.col);
+            
+            if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+                // Swap with empty space
+                grid[emptyPos.row][emptyPos.col] = pieceNum;
+                grid[row][col] = 5;
+                emptyPos = { row, col };
+                
+                moves++;
+                updateMoveCounter();
+                updateDisplay();
+                
+                if (checkWin()) {
+                    setTimeout(showVictoryMessage, 300);
+                }
+            }
+        }
+
+        function updateDisplay() {
+            const pieces = document.querySelectorAll('.puzzle-piece');
+            let index = 0;
+            
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 3; col++) {
+                    updatePiece(pieces[index], row, col);
+                    index++;
+                }
+            }
+        }
+
+        function checkWin() {
+            const target = [
+                [0, 1, 2],
+                [3, 4, 5]
+            ];
+            
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 3; col++) {
+                    if (grid[row][col] !== target[row][col]) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function shufflePuzzle() {
+            // Perform random valid moves to shuffle
+            for (let i = 0; i < 100; i++) {
+                const validMoves = [];
+                
+                // Find valid moves
+                if (emptyPos.row > 0) validMoves.push({ row: emptyPos.row - 1, col: emptyPos.col });
+                if (emptyPos.row < 1) validMoves.push({ row: emptyPos.row + 1, col: emptyPos.col });
+                if (emptyPos.col > 0) validMoves.push({ row: emptyPos.row, col: emptyPos.col - 1 });
+                if (emptyPos.col < 2) validMoves.push({ row: emptyPos.row, col: emptyPos.col + 1 });
+                
+                // Make random move
+                const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                const pieceNum = grid[randomMove.row][randomMove.col];
+                grid[emptyPos.row][emptyPos.col] = pieceNum;
+                grid[randomMove.row][randomMove.col] = 5;
+                emptyPos = randomMove;
+            }
+            
+            moves = 0;
+            updateMoveCounter();
+            updateDisplay();
+        }
+
+        function resetPuzzle() {
+            initPuzzle();
+        }
+
+        function updateMoveCounter() {
+            document.getElementById('moveCount').textContent = moves;
+        }
+
+        function showVictoryMessage() {
+            document.getElementById('victoryOverlay').style.display = 'block';
+            document.getElementById('victoryMessage').style.display = 'block';
+        }
+
+        function closeVictoryMessage() {
+            document.getElementById('victoryOverlay').style.display = 'none';
+            document.getElementById('victoryMessage').style.display = 'none';
+        }
+
+        // Initialize the puzzle when page loads
+        initPuzzle();
+        shufflePuzzle(); // Start with shuffled puzzle
+    </script>
 </body>
 </html>
